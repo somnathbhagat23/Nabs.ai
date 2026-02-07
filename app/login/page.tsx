@@ -23,7 +23,7 @@ export default function LoginPage() {
     };
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      async (event: any, session: any) => {
         if (event === "SIGNED_IN" && session?.user) {
           await supabase.from("users").upsert({
             id: session.user.id,
