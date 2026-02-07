@@ -1,0 +1,54 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  @apply bg-nabs-bg text-nabs-text antialiased;
+  font-family: "Inter", "SF Pro Text", system-ui, sans-serif;
+}
+
+.nabs-surface {
+  background-color: #121214;
+}
+
+.nabs-input {
+  background-color: #1A1A1D;
+  border: 1px solid #2A2A2E;
+  border-radius: 16px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+}
+
+.fade-enter {
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+.fade-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 200ms ease-in-out, transform 200ms ease-in-out;
+}
+
+.fade-exit {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.fade-exit-active {
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 200ms ease-in-out, transform 200ms ease-in-out;
+}
+
+.blur-video {
+  filter: blur(12px);
+  transition: filter 220ms ease-in-out;
+}
+
+.blur-video.deep {
+  filter: blur(20px);
+}
