@@ -8,12 +8,29 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const syncSessionUser = async () => {
+      const { data } = await supabase.auth.getSession();
+      const user = data.session?.user;
+      if (user) {
+        await supabase.from("users").upsert({
+          id: user.id,
+          name: user.user_metadata.full_name ?? user.user_metadata.name ?? null,
+          email: user.email,
+          online: true
+        });
+        window.location.href = "/profile";
+      }
+    };
+
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (event === "SIGNED_IN" && session?.user) {
           await supabase.from("users").upsert({
             id: session.user.id,
-            name: session.user.user_metadata.full_name,
+            name:
+              session.user.user_metadata.full_name ??
+              session.user.user_metadata.name ??
+              null,
             email: session.user.email,
             online: true
           });
@@ -21,6 +38,8 @@ export default function LoginPage() {
         }
       }
     );
+
+    void syncSessionUser();
 
     return () => {
       authListener?.subscription.unsubscribe();
@@ -33,7 +52,11 @@ export default function LoginPage() {
     const { error: signInError } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`
+        redirectTo: `${window.location.origin}/auth/callback`,
+        queryParams: {
+          access_type: "offline",
+          prompt: "consent"
+        }
       }
     });
 
