@@ -9,7 +9,7 @@ export default function AuthCallbackPage() {
 
   useEffect(() => {
     const finalizeSignIn = async () => {
-      const params = new URLSearchParams(window.location.search);
+      const params = new URLSearchParams(window.location.hash.substring(1));
       const errorParam = params.get("error_description") ?? params.get("error");
       if (errorParam) {
         setError(decodeURIComponent(errorParam));
