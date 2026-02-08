@@ -2,49 +2,63 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
 export default function AuthCallbackPage() {
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
-    const finalizeSignIn = async () => {
-      const params = new URLSearchParams(window.location.hash.substring(1));
-      const errorParam = params.get("error_description") ?? params.get("error");
-      if (errorParam) {
-        setError(decodeURIComponent(errorParam));
-        return;
+    // Check for errors passed in the URL hash from the provider
+    const params = new URLSearchParams(window.location.hash.substring(1));
+    const errorParam = params.get("error_description") ?? params.get("error");
+    if (errorParam) {
+      setError(decodeURIComponent(errorParam));
+      return;
+    }
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === "SIGNED_IN" && session) {
+        subscription?.unsubscribe(); // Prevent this from running again
+        try {
+          const user = session.user;
+          const { error: upsertError } = await supabase.from("users").upsert({
+            id: user.id,
+            name:
+              user.user_metadata.full_name ??
+              user.user_metadata.name ??
+              null,
+            email: user.email,
+            online: true,
+          });
+
+          if (upsertError) {
+            throw upsertError;
+          }
+
+          // Redirect to the profile page on successful sign-in and upsert
+          router.replace("/profile");
+        } catch (e: any) {
+          setError(e.message);
+        }
       }
+    });
 
-      const code = params.get("code");
-      if (!code) {
-        setError("Missing OAuth code. Please try signing in again.");
-        return;
-      }
+    // Set a timeout in case the auth event doesn't fire
+    const timeout = setTimeout(() => {
+        if (!error) {
+            setError("Authentication timed out. Please try signing in again.");
+        }
+    }, 10000);
 
-      const { data, error: exchangeError } =
-        await supabase.auth.exchangeCodeForSession(code);
-
-      if (exchangeError) {
-        setError(exchangeError.message);
-        return;
-      }
-
-      const user = data.session?.user;
-      if (user) {
-        await supabase.from("users").upsert({
-          id: user.id,
-          name: user.user_metadata.full_name ?? user.user_metadata.name ?? null,
-          email: user.email,
-          online: true
-        });
-      }
-
-      window.location.replace("/profile");
+    return () => {
+      subscription?.unsubscribe();
+      clearTimeout(timeout);
     };
-
-    void finalizeSignIn();
-  }, []);
+  }, [router, error]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-nabs-bg px-6">
@@ -65,7 +79,9 @@ export default function AuthCallbackPage() {
               Back to login
             </Link>
           </div>
-        ) : null}
+        ) : (
+          <p className="mt-4 text-sm text-nabs-muted">Please wait...</p>
+        )}
       </div>
     </div>
   );
